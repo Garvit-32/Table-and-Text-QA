@@ -5,4 +5,7 @@
 **checkpoint**
 **best**
 tatqa_tapas/tapas**
-commands.txt
+
+**t5**
+*.txt
+*.csv

@@ -4,7 +4,7 @@ apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists
 
 
-pip install pandas scikit-learn tqdm numpy nvitop seaborn transformers datasets evaluate sentencepiece seqeval spacy
+pip install pandas scikit-learn tqdm numpy nvitop seaborn transformers datasets evaluate sentencepiece seqeval spacy sacrebleu
 pip install torch-scatter -f https://data.pyg.org/whl/torch-1.11.0+cu113.html
 spacy download en_core_web_lg
 spacy download en_core_web_sm

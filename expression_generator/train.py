@@ -1,27 +1,24 @@
 import os
-# os.environ["CUDA_VISIBLE_DEVICES"]="5"
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
 os.environ['WANDB_DISABLED'] = 'true'
 os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = 'true'
 # os.environ['WANDB_PROJECT']='TATQA-TEXT'
 
-# Abcd@12345
-
-
 import json
 import ast
-import evaluate
 import numpy as np
 import pandas as pd 
-from datasets import load_metric
+import evaluate
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
 from transformers import AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
 
 
-batch_size = 16
-training_name = "t5-large-bs-16"
-model_checkpoint = "t5-large"
+batch_size = 32
+nepochs = 20
+training_name = "t5-small-bs-32"
+model_checkpoint = "t5-small"
 
 print(model_checkpoint)
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
@@ -44,7 +41,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
 #     return {**a, **f, **p, **r}
 
 
-metric = load_metric("sacrebleu")
+metric = evaluate.load("sacrebleu")
 
 def postprocess_text(preds, labels):
     preds = [pred.strip() for pred in preds]
@@ -114,23 +111,28 @@ args = Seq2SeqTrainingArguments(
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
     weight_decay=0.01,
-    save_total_limit=3,
-    num_train_epochs=10,
+    num_train_epochs=nepochs,
     predict_with_generate=True,
     fp16=True,
+
+    save_total_limit = 2,
+    save_strategy = "no",
+    load_best_model_at_end=False,
 )
 
 trainer = Seq2SeqTrainer(
-    model,
-    args,
+    model=model,
+    args=args,
     train_dataset=train_dataset,
     eval_dataset=eval_dataset,
     data_collator=data_collator,
+    compute_metrics=compute_metrics,
     tokenizer=tokenizer,
-    compute_metrics=compute_metrics
 )
 
+
 train_result = trainer.train()
+trainer.save_model(training_name)
 
 # compute train results
 metrics = train_result.metrics

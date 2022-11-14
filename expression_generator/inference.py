@@ -18,3 +18,8 @@ print(translator('For Balance payable as at June 30, 2019, What is the differenc
 
 
 # en_fr_translator = pipeline("translation_en_to_fr")
+
+# t5-base-bs-16  57.91
+# t5-base-bs-32  58.28
+# t5-large-bs-16  
+# t5-large-bs-32 
