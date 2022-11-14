@@ -1,0 +1,135 @@
+UID: 6bf238a5-0a3e-492d-91f8-7f62d3b37fba
+ORDER: 6
+DERIVATION: [(166+178)/2] - [(57+44)/2]
+ANSWER_TYPE: arithmetic
+FACTS: ['166', '178', '2', '44', '57']
+ANSWER: 121.5
+MAPPING: {'table': [[3, 2], [2, 3], [2, 2], [3, 1], [2, 1]]}
+QUESTION: What is the difference between 2019 average defined contribution schemes and 2019 average defined benefit schemes?
+============================================================
+UID: 403df8e0-6045-4dba-90b3-5c9d8ca55bfb
+ORDER: 6
+DERIVATION: [(4,411+4,044)/2] -[(4,044+3,316)/2]
+ANSWER_TYPE: arithmetic
+FACTS: ['2', '3,316', '4,044', '4,411']
+ANSWER: 547.5
+MAPPING: {'table': [[16, 2], [0, 1], [16, 1], [16, 3]]}
+QUESTION: What is the change between 2018 and 2019 average free cash flow?
+============================================================
+UID: 77d8e381-01d0-4cf9-882e-e1162db2cff2
+ORDER: 5
+DERIVATION: ((85,123 - 79,046) + (63,954 - 62,575)) / 2 
+ANSWER_TYPE: arithmetic
+FACTS: ['2', '62,575', '63,954', '79,046', '85,123']
+ANSWER: 3728
+MAPPING: {'table': [[14, 2], [7, 3], [14, 1], [7, 2], [7, 1]]}
+QUESTION: What was the average difference between EBITDA and underlying EBITDA for both FYs?
+============================================================
+UID: 8692f92d-668a-452d-be7a-2b491ee27585
+ORDER: 6
+DERIVATION: [(1,062+1,018)/2] - [(1,018+950)/2]
+ANSWER_TYPE: arithmetic
+FACTS: ['1,018', '1,062', '2', '950']
+ANSWER: 56
+MAPPING: {'table': [[11, 1], [11, 3], [11, 2], [11, 1]]}
+QUESTION: What is the change in the average total current tax expense between 2017-2018, and 2018-2019?
+============================================================
+UID: a9ddf64a-2806-4476-b341-05d7d06fdcf6
+ORDER: 4
+DERIVATION: (235,514*2.92)+(81,794*3.59) 
+ANSWER_TYPE: arithmetic
+FACTS: ['2.92', '235,514', '3.59', '81,794']
+ANSWER: 981341.34
+MAPPING: {'table': [[4, 2], [3, 2], [3, 1], [4, 1]]}
+QUESTION: What is the total price of shares that were exercised or canceled between 2016 and 2017?
+============================================================
+UID: daf81839-002f-40c2-8067-b4ad7eaf1517
+ORDER: 2
+DERIVATION: (1-15%)*($2.2/15%) 
+ANSWER_TYPE: arithmetic
+FACTS: ['1', '15', '2.2']
+ANSWER: 12.47
+MAPPING: {'paragraph': {'6': [[187, 190], [202, 204], [74, 76], [201, 203]]}}
+QUESTION: How much were the research and development expenses in 2018?
+============================================================
+UID: daf81839-002f-40c2-8067-b4ad7eaf1517
+ORDER: 6
+DERIVATION: (1-6%)*(273/6%) 
+ANSWER_TYPE: arithmetic
+FACTS: ['1', '273', '6']
+ANSWER: 4277
+MAPPING: {'paragraph': {'12': [[615, 618], [61, 62], [473, 474], [630, 631]]}}
+QUESTION: How much were the general and administrative expenses in 2017?
+============================================================
+UID: 02a7787e-92f9-4a5a-9f95-c4c9ed0f7eff
+ORDER: 6
+DERIVATION: [(4+4)/2] - [(2+3)/2]
+ANSWER_TYPE: arithmetic
+FACTS: ['2', '3', '4']
+ANSWER: 1.5
+MAPPING: {'table': [[1, 1], [2, 1], [2, 2]]}
+QUESTION: What is the difference between average salaries and fees and average incentive schemes from 2018 to 2019?
+============================================================
+UID: 879fb3ae-fc64-49f1-8a85-5756ff4ee3b6
+ORDER: 4
+DERIVATION: (458,202+1,158,000)-2,016,666
+ANSWER_TYPE: arithmetic
+FACTS: ['1,158,000', '2,016,666', '458,202']
+ANSWER: -400464
+MAPPING: {'table': [[3, 1], [4, 1], [2, 1]]}
+QUESTION: What is the change in warrants outstanding from Aug 2007-Jan 2011 to Jun-2018?
+============================================================
+UID: 879fb3ae-fc64-49f1-8a85-5756ff4ee3b6
+ORDER: 5
+DERIVATION: (842,000-(458,202+1,158,000))/842,000
+ANSWER_TYPE: arithmetic
+FACTS: ['1,158,000', '458,202', '842,000']
+ANSWER: -91.95
+MAPPING: {'table': [[3, 1], [5, 1], [4, 1]]}
+QUESTION: What is the percentage change in the warrants outstanding from Jun-2018 to Aug-2019?
+============================================================
+UID: fb333978-9a21-401f-9660-ccdff2e36d02
+ORDER: 6
+DERIVATION: $5,121 +$(-5,946) + $17,592 
+ANSWER_TYPE: arithmetic
+FACTS: ['17,592', '5,121', '5,946']
+ANSWER: 16767
+MAPPING: {'table': [[6, 1], [6, 2], [6, 3]]}
+QUESTION: What is the total cash provided by all cash flow related activities between 2017 to 2019?
+============================================================
+UID: 9791f353-ce82-41be-a93d-915b8f52677b
+ORDER: 5
+DERIVATION: ((793.4+934.2)-(843.5+1,054.8))/(843.5+1,054.8) 
+ANSWER_TYPE: arithmetic
+FACTS: ['1,054.8', '793.4', '843.5', '934.2']
+ANSWER: -8.99
+MAPPING: {'table': [[4, 1], [5, 2], [5, 1], [4, 2]]}
+QUESTION: What is the percentage change in total net sales of International and Foodservice from fiscal year 2018 to 2019?
+============================================================
+UID: 02913daf-213d-46e7-bf29-a65a8e64550f
+ORDER: 5
+DERIVATION: [(-2,088) + (-1,074)]/2
+ANSWER_TYPE: arithmetic
+FACTS: ['1,074', '2', '2,088']
+ANSWER: -1581
+MAPPING: {'table': [[4, 1], [4, 1], [4, 2]]}
+QUESTION: What is the average financing costs between 2018 and 2019?
+============================================================
+UID: 02913daf-213d-46e7-bf29-a65a8e64550f
+ORDER: 6
+DERIVATION: [(433+685)/2] - [(-2,088) + (-1,074)]/2
+ANSWER_TYPE: arithmetic
+FACTS: ['1,074', '2', '2,088', '433', '685']
+ANSWER: 2140
+MAPPING: {'table': [[4, 1], [3, 1], [4, 1], [3, 2], [4, 2]]}
+QUESTION: What is the difference between the average investment income and average financing costs?
+============================================================
+UID: 62d958c0-fb12-4683-b503-e5c01da9aea6
+ORDER: 6
+DERIVATION: (-2,235+(-6,986)+5,737)/3
+ANSWER_TYPE: arithmetic
+FACTS: ['2,235', '5,737', '6,986']
+ANSWER: -1161.33
+MAPPING: {'table': [[2, 1], [2, 3], [2, 2]]}
+QUESTION: What is the average operating income (loss) across 2017, 2018 and 2019?
+============================================================
