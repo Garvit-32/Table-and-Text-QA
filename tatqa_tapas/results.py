@@ -15,11 +15,11 @@ import evaluate
 metric = evaluate.load("squad_v2")
 
 
-model_name = "google/tapas-base"
-tokenizer = TapasTokenizer.from_pretrained(model_name)
+model_checkpoint = 'tapas_large'
+tokenizer = TapasTokenizer.from_pretrained(model_checkpoint)
 
 # model = TapasForQuestionAnswering.from_pretrained('best_save_3')
-model = TapasForQuestionAnswering.from_pretrained('tapas_large')
+model = TapasForQuestionAnswering.from_pretrained(model_checkpoint)
 # model = TapasForQuestionAnswering.from_pretrained('tapas')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
@@ -38,10 +38,6 @@ def get_answers(uid, pred_answer_coord):
 
     pred_answers = []
     gt_answers = []
-    # print('='*60)
-    # print(pred_answer_coord[0])
-    # print(uid)
-    # print('='*60)
 
     for idx, coordinates in enumerate(pred_answer_coord[0]):
         table_uid = uid[idx].split('+')[0]
@@ -63,6 +59,9 @@ def get_answers(uid, pred_answer_coord):
             cell_values = []
             for coordinate in gt_answers_coords:
                 cell_values.append(table.iat[coordinate])
+            
+            cell_values = list(map(str, cell_values))
+            cell_values.sort()
             gt_dict['answers'] = {"text": [", ".join(cell_values)], 'answer_start':[0]}
 
 
@@ -73,12 +72,14 @@ def get_answers(uid, pred_answer_coord):
             pred_dict['no_answer_probability'] = 1.
             
         elif len(coordinates) == 1:
-            pred_dict['prediction_text'] = table.iat[coordinates[0]]
+            pred_dict['prediction_text'] = str(table.iat[coordinates[0]])
             pred_dict['no_answer_probability'] = 0.
         else:
             cell_values = []
             for coordinate in coordinates:
                 cell_values.append(table.iat[coordinate])
+            cell_values = list(map(str, cell_values))
+            cell_values.sort()
             pred_dict['prediction_text'] = ", ".join(cell_values)
             pred_dict['no_answer_probability'] = 0.
 
@@ -91,11 +92,8 @@ def get_answers(uid, pred_answer_coord):
 
 def get_inference(uid, position):
 
-    
 
     item = df[(df.uid == uid) & (df.position == position)].values[0]
-
-    # print(item)
 
     table = pd.read_csv(f'{table_csv_path}/{uid}.csv').astype(str) # TapasTokenizer expects the table data to be text only
     encoding = tokenizer(table=table, 

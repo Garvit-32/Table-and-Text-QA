@@ -18,7 +18,7 @@ from transformers import AutoModelForSequenceClassification, TrainingArguments, 
 
 batch_size = 42
 num_classes = 11
-training_name = "bert-tc-bs-42"
+training_name = "bert-tc-bs-42-arith"
 # model_checkpoint = "xlnet-base-cased"
 model_checkpoint = "bert-base-uncased"
 # model_checkpoint = "distilbert-base-uncased"

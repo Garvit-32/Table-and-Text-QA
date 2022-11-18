@@ -14,16 +14,17 @@ from transformers import DataCollatorForTokenClassification, AutoTokenizer, Auto
 
 
 
-batch_size = 16
+batch_size = 32
 epochs = 20
-training_name = 'bert-large-num-bs-16'
+training_name = 'bert-large-bio-bs-32'
 model_checkpoint = "bert-large-uncased"
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
 data_collator = DataCollatorForTokenClassification(tokenizer=tokenizer)
 
 df = pd.read_csv('dataset_tagop/train.csv').values
 # label_names = ['O', 'I']
-label_names = ['O', 'I-ANS', 'B-ANS']
+# label_names = ['O', 'I-ANS', 'B-ANS']
+label_names = ['O', 'B-ANS', 'I-ANS']
 
 metric = evaluate.load("seqeval")
 

@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 dataset = pd.DataFrame(columns = ['uid', 'order', 'question', 'answer', 'label'])
 
 
-mode = 'dev'
+mode = 'train'
 data =json.load(open(f'dataset_tagop/tatqa_dataset_{mode}.json', 'r'))
 f = open(f"{mode}_log.txt", "w")
 
@@ -36,9 +36,6 @@ for i in tqdm(range(len(data))):
             ques['answer'],
             ques['mapping']
             )
-        
-        
-
         if operator == None:
             count += 1 
             f.write(f"UID: {uid}\n")
@@ -52,11 +49,6 @@ for i in tqdm(range(len(data))):
             f.write('=' * 60 + '\n')
             operator = 10
             # print(ques)
-
-        if operator > 2: 
-            operator -= 2
-        else: 
-            operator = 0
         # else: 
         row = {
             'uid':uid,

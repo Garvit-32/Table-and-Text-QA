@@ -10,9 +10,10 @@ import json
 import math
 import torch 
 import evaluate
-from utils import *
+from utils import to_number
 import pandas as pd
 from tqdm import tqdm
+import numpy as np
 from transformers import TapasForQuestionAnswering, TapasTokenizer, pipeline
 
 
@@ -30,9 +31,15 @@ mode = 'dev'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 table_model_checkpoint = "tatqa_tapas/tapas_large"
-text_model_checkpoint = "tatqa_text/bert-large-bs-16"
-op_model_checkpoint = "operator_pred/bert-tc-bs-42"
+# text_model_checkpoint = "tatqa_text/bert-large-bs-16"
+text_model_checkpoint = "tatqa_text/bert-large-bio-bs-32"
+
+op_model_checkpoint = "operator_pred/bert-tc-bs-42-arith"
+# op_model_checkpoint = "operator_pred/bert-tc-bs-42"
+
 gen_model_checkpoint = "expression_generator/t5-base-bs-32"
+
+
 # gen_model_checkpoint = "expression_generator/t5-base-translation-bs-8"
 
 table_csv_path = 'tatqa_tapas/dataset_tagop_table/dev'
@@ -43,14 +50,24 @@ table_model.to(device)
 op_list = ["SPAN-TEXT", "SPAN-TABLE", "MULTI_SPAN", "CHANGE_RATIO",
                     "AVERAGE", "COUNT", "SUM", "DIFF", "TIMES", "DIVIDE" ,"MIXED"]
 
+# exp_list = {
+#             3: ['-', '/', "(" , ")", '[', ']'],  # change ratio
+#             4: ['+', '/', "(" , ")", '[', ']'],  # average 
+#             6: ['+'], # sum
+#             7: ['-'], # diff
+#             8: ['*'], # times
+#             9: ['/'], # divide
+#             10: ['+', '-', '*', '/', "(" , ")", '[', ']'] # None
+#             }
+
 exp_list = {
-            3: ['-', '/', "(" , ")", '[', ']'],  # change ratio
-            4: ['+', '/', "(" , ")", '[', ']'],  # average 
-            6: ['+'], # sum
-            7: ['-'], # diff
-            8: ['*'], # times
-            9: ['/'], # divide
-            10: ['+', '-', '*', '/', "(" , ")", '[', ']'] # None
+            1: ['-', '/', "(" , ")", '[', ']'],  # change ratio
+            2: ['+', '/', "(" , ")", '[', ']'],  # average 
+            4: ['+'], # sum
+            5: ['-'], # diff
+            6: ['*'], # times
+            7: ['/'], # divide
+            8: ['+', '-', '*', '/', "(" , ")", '[', ']'] # None
             }
 
 text_model = pipeline(
@@ -246,7 +263,8 @@ def exp_postproces(exp):
     try: 
         exp = re.sub('[!@%#$,]', '', str(exp))       
         ans = eval(exp)                    
-        if 'percentage' in question or '%' in table_output[0]:
+        # if 'percentage' in question or '%' in table_output[0]:
+        if 'percentage' in question:
             ans *= 100
         ans = round(ans, 2)
         
@@ -267,6 +285,8 @@ df = pd.DataFrame(columns = ['uid', 'order', 'question', 'ans', 'pred'])
 data =json.load(open(f'operator_pred/dataset_tagop/tatqa_dataset_{mode}.json', 'r'))
 # f = open(f"log.txt", "w")
 exact, f1 = [],[]
+pred = []
+gt = []
 
 for i in tqdm(range(len(data))):
     paragraphs = data[i]['paragraphs']
@@ -291,9 +311,11 @@ for i in tqdm(range(len(data))):
         text_output = text_postprocess(question, text)
         operator = op_postprocess(question)
         
-        if operator > 2 :
+        if operator > 0 :
+        # if operator > 2 :
 
-            if operator == 5:  # For COUNT
+            # if operator == 5:  # For COUNT
+            if operator == 3:  # For COUNT
                 ans = str(len(table_output) + len(text_output))
             else:
                 expression = gen_postprocess(question, table_output, text_output, exp_list[operator])
@@ -301,17 +323,19 @@ for i in tqdm(range(len(data))):
                 ans = exp_postproces(exp)
 
         pred_dict = prepare_pred(uid, ques_order, table_output, text_output, ans)
+        pred.append(pred_dict)
+        gt.append(gt_dict)
         
-        result = metric.compute(predictions=[pred_dict], references=[gt_dict])
-        arg1,arg2 =  result['exact_match'], result['f1']
+        # result = metric.compute(predictions=[pred_dict], references=[gt_dict])
+        # arg1,arg2 =  result['exact_match'], result['f1']
         # return result['exact'], result['f1']
         # print(pred_dict)
         # print(gt_dict)
         # print(table_output)
         # print(text_output)
         # print(operator)
-        exact.append(arg1)
-        f1.append(arg2)
+        # exact.append(arg1)
+        # f1.append(arg2)
     
 
 
@@ -335,9 +359,10 @@ for i in tqdm(range(len(data))):
         # df = df.append(row, ignore_index = True)
         
 
-
-print(np.mean(exact))
-print(np.mean(f1))
+result = metric.compute(predictions=pred, references=gt)
+print(result)
+# print(np.mean(exact))
+# print(np.mean(f1))
 
 # df.to_csv(f'results.csv', index = False)
 # f.close()
@@ -403,3 +428,18 @@ print(np.mean(f1))
 
 # UID: 52164b70-6973-4844-af6a-76e8f1298d64
 # ORDER: 4
+
+
+# both
+# {'exact_match': 54.13669064748201, 'f1': 66.41866513744009}
+
+# with text bio-bs-16
+# {'exact_match': 53.776978417266186, 'f1': 65.93776414394915}
+
+# with text bio-bs-16
+# {'exact_match': 54.49640287769784, 'f1': 66.2345706582395}
+
+
+
+# with op
+# {'exact_match': 58.87290167865707, 'f1': 70.45967781294495}

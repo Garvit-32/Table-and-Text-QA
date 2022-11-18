@@ -18,7 +18,7 @@ warnings.filterwarnings('ignore')
 dataset = pd.DataFrame(columns = ['uid', 'order', 'question', 'text', 'answer', 'token', 'ner'])
 
 # os.makedirs(f'dataset_tagop/{mode}', exist_ok = True)
-mode = 'dev'
+mode = 'train'
 f = open(f"{mode}_log.txt", "a")
 data =json.load(open(f'dataset_tagop/tatqa_dataset_{mode}.json', 'r'))
 

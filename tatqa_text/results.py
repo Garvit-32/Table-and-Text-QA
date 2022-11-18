@@ -14,10 +14,11 @@ import evaluate
 metric = evaluate.load("squad_v2")
 
 
-mode = 'dev'
+mode = 'train'
 dataset_path = 'dataset_tagop'
 table_csv_path = 'dataset_tagop/dev'
-model_checkpoint = "bert-large-num-bs-16"
+model_checkpoint = "bert-large-bio-bs-32"
+# model_checkpoint = "bert-large-num-bs-16"
 # model_checkpoint = "bert-base-bs-32"
 data =json.load(open(f'dataset_tagop/tatqa_dataset_{mode}.json', 'r'))
 
@@ -29,17 +30,38 @@ token_classifier = pipeline(
 def postprocess(uid, order, output, answer):
     text  = []
 
-    if len(output):
-        if output[-1]['word'] ==  '.':
-            output.pop()
+    # if len(output):
+    #     if output[-1]['word'] ==  '.':
+    #         output.pop()
 
-    for i in output:
-        text.append(i['word'])
+    tmp = ''
+    prev_end = 0
+
+    for idx, i in enumerate(output):
+        
+        start = i['start']
+        end = i['end']
+        word = i['word']
+        
+        if prev_end + 1 == start:
+            tmp += ' '
+
+        elif prev_end != start and idx != 0:
+            text.append(tmp)
+            tmp = '' 
+
+        tmp += word
+        if idx == len(output) - 1:
+            text.append(tmp)
+        
+        prev_end = end
     
     uid_order = uid + '_' + str(order)
     pred_dict = {'id' : uid_order}
-
+    
     if len(text):
+        text = list(map(str, text))
+        text.sort()
         text = ' '.join(text)
         pred_dict['no_answer_probability'] = 0.
     else:
@@ -49,6 +71,9 @@ def postprocess(uid, order, output, answer):
 
     pred_dict['prediction_text'] = text
     
+
+    text = list(map(str, text))
+    text = text.sort()
     answer = ' '.join(answer)
 
 
@@ -65,16 +90,16 @@ for i in tqdm(range(len(data))):
     paragraphs = data[i]['paragraphs']
     uid = data[i]['table']['uid']
     paras = ' '.join([para['text'] for para in paragraphs])
-    paras = paras.split(' ')
-    new_paras = []
-    for p in paras:
-        num = to_number(p)
-        if num is not None:
-            new_paras.append(str(num))
-        else:
-            new_paras.append(p)
+    # paras = paras.split(' ')
+    # new_paras = []
+    # for p in paras:
+    #     num = to_number(p)
+    #     if num is not None:
+    #         new_paras.append(str(num))
+    #     else:
+    #         new_paras.append(p)
     
-    new_paras = ' '.join(new_paras)
+    # new_paras = ' '.join(new_paras)
     
 
     questions = data[i]['questions']
@@ -86,7 +111,7 @@ for i in tqdm(range(len(data))):
 
         if ques['answer_type'] != 'arithmetic' and ques['answer_from'] != 'table-text':
 
-            text = question + ' [SEP] ' + new_paras
+            text = question + ' [SEP] ' + paras
             # text = question + ' [SEP] ' + paras
 
             output = token_classifier(text)
@@ -117,5 +142,18 @@ print(np.mean(f1))
 
 # 55.401234567901234
 # 76.32378104053979
+
+# tweaks
+# 61.26543209876543
+# 81.52669589300007
+
+
+# bert-large-bio-bs-16
+# 69.08456167571761
+# 85.44454493738296
+
+# bert-large-bio-bs-32
+# 68.79363847944143
+# 85.40983374630115
 
 # [{'entity_group': 'ANS', 'score': 0.99846727, 'word': '268', 'start': 528, 'end': 531}, {'entity_group': 'ANS', 'score': 0.99950314, 'word': ',', 'start': 531, 'end': 532}, {'entity_group': 'ANS', 'score': 0.9994068, 'word': '000', 'start': 532, 'end': 535}]

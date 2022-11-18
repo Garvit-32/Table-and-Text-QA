@@ -8,7 +8,7 @@ warnings.filterwarnings('ignore')
 
 dataset = pd.DataFrame(columns = ['uid', 'order', 'question', 'text', 'answer', 'token', 'ner'])
 
-mode = 'train'
+mode = 'dev'
 f = open(f"{mode}_log.txt", "a")
 data =json.load(open(f'dataset_tagop/tatqa_dataset_{mode}.json', 'r'))
 
@@ -72,7 +72,7 @@ def question_tags(text):
     return tokens, tags 
 
 def paragraph_tags(paragraphs, mapping):
-    mapping_content = []
+    # mapping_content = []
     paragraphs_copy = paragraphs.copy()
     paragraphs = {}
     for paragraph in paragraphs_copy:
@@ -88,6 +88,8 @@ def paragraph_tags(paragraphs, mapping):
         paragraph_mapping_orders = list(mapping["paragraph"].keys())
 
     order_list = list(map(int, paragraphs.keys()))
+    # order_list.pop()
+    # print(order_list)
     for order in order_list:
         text = paragraphs[order]
         prev_is_whitespace = True
@@ -97,20 +99,19 @@ def paragraph_tags(paragraphs, mapping):
         current_tags = [0 for i in range(len(text))]
         if answer_indexs is not None:
             for answer_index in answer_indexs:
-                mapping_content.append(text[answer_index[0]:answer_index[1]])
+                # mapping_content.append(text[answer_index[0]:answer_index[1]])
                 current_tags[answer_index[0]:answer_index[1]] = \
                     [1 for i in range(len(current_tags[answer_index[0]:answer_index[1]]))]
         start_index = 0
         wait_add = False
         # change tag 1 to 2 and apply BIO tagging
 
-        
         for i, c in enumerate(text):
-
+            # print("c:", c, "wait_add:", wait_add,  "prev_is_whitespace:", prev_is_whitespace   , 'Index:', start_index)
             if is_whitespace(c):  # or c in ["-", "–", "~"]:
                 if wait_add:
                     if 1 in current_tags[start_index:i]:
-                        tags.append(1)
+                        tags.append(2)
                     else:
                         tags.append(0)
                     wait_add = False
@@ -118,9 +119,8 @@ def paragraph_tags(paragraphs, mapping):
                 
             elif c in ["-", "–", "~"]:
                 if wait_add:
-                    
                     if 1 in current_tags[start_index:i]:
-                        tags.append(1)
+                        tags.append(2)
                     else:
                         tags.append(0)
                     wait_add = False
@@ -137,13 +137,13 @@ def paragraph_tags(paragraphs, mapping):
                 prev_is_whitespace = False
         if wait_add:
             if 1 in current_tags[start_index:len(text)]:
-                tags.append(1)
+                tags.append(2)
             else:
                 tags.append(0)
 
-        # print(text)
-        # print(tokens)
-        # print(tags)
+    # print(text)
+    # print(tokens)
+    # print(tags)
 
     # token = []
     # for i in tokens:
@@ -153,26 +153,28 @@ def paragraph_tags(paragraphs, mapping):
     #     else:        
     #         token.append(i)   
 
-# 
     # new_tags = []
-    # zero = True
-    # for i in tags:
-    #     if i == 2 and zero == True:
-    #         tags[i] = 1
-    #         # new_tags.append(1)
-    #         zero = False
-    #     elif i == 0:
-    #         zero = True
+    zero = True
+    for idx, i in enumerate(tags):
+        if i == 2 and zero == True:
+            tags[idx] = 1
+            # new_tags.append(1)
+            zero = False
+        elif i == 0:
+            zero = True
     
-
     return tokens, tags
 
+
+count = 0
 for i in tqdm(range(len(data))):
     paragraphs = data[i]['paragraphs']
     uid = data[i]['table']['uid']
     text = [para['text'] for para in paragraphs]
 
-    # if uid !=  '3ffd9053-a45d-491c-957a-1b2fa0af0570':continue 
+    # if uid !=  '13bb283b-4b9c-42b9-9b02-f1b2e1a87abf': continue 
+    # if uid !=  '32edf644-acb0-4260-9392-f0baa4253f5a': continue 
+    # if uid !=  '3ffd9053-a45d-491c-957a-1b2fa0af0570': continue 
 
     questions = data[i]['questions']
     for ques in questions:
@@ -180,12 +182,12 @@ for i in tqdm(range(len(data))):
         mappings = ques['mapping']
         question = ques['question']
 
-        # if ques_order != 3: continue/
+        # if ques_order != 3: continue
+        # if ques_order != 6: continue
         
-        
-
-        ques_token, ques_tag = question_tags(question)     
+    
         para_tokens, para_tags = paragraph_tags(paragraphs, mappings)
+        ques_token, ques_tag = question_tags(question)     
 
         if len(para_tokens) != len(para_tags) or len(ques_token) != len(ques_tag):
             f.write('Continuing\n')
@@ -211,6 +213,11 @@ for i in tqdm(range(len(data))):
 
         dataset = dataset.append(row, ignore_index = True)
 
+        # tags.remove(None)
+        # if sum(tags) == 0:
+        #     count += 1
+
+print(count)
 dataset.to_csv(f'dataset_tagop/{mode}.csv', index = False)
 f.close()
 
