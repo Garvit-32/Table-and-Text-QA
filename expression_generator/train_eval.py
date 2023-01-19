@@ -8,63 +8,68 @@ os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = 'true'
 
 import json
 import ast
-import random
 import numpy as np
 import pandas as pd 
-import torch
 import evaluate
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
 from transformers import AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer, AutoModel
 
-def seed_everything(seed: int):
-    random.seed(seed)
-    os.environ["PYTHONHASHSEED"] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = True
 
-seed_everything(42)
 
-batch_size = 32
-nepochs = 20
-training_name = "bart-base-bs-32-old-hyp"
-model_checkpoint = "facebook/bart-base"
-suffix = ''
-# suffix = '_all'
-# suffix = '_not_op'
+batch_size = 16
+nepochs = 3
+training_name = "temp"
+model_checkpoint = "t5-base"
+suffix = '_copy'
 
 print(model_checkpoint)
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
-# tokenizer.pad_token = tokenizer.eos_token 
 
  
-# fmetric = evaluate.load("f1")
-# pmetric = evaluate.load("precision")
-# rmetric = evaluate.load("recall")
-# ametric = evaluate.load("accuracy")
 
-# def compute_metrics(eval_preds):
-#     logits, labels = eval_preds
-#     predictions = np.argmax(logits, axis=-1)
-#     # print(predictions)
-#     # print(labels)
-#     a = ametric.compute(predictions=predictions, references=labels)
-#     f = fmetric.compute(predictions=predictions, references=labels, average = 'macro')
-#     p = pmetric.compute(predictions=predictions, references=labels, average = 'macro')
-#     r = rmetric.compute(predictions=predictions, references=labels, average = 'macro')
-#     return {**a, **f, **p, **r}
-
-
-metric = evaluate.load("sacrebleu")
+# metric = evaluate.load("sacrebleu")
+metric = evaluate.load("squad")
 
 def postprocess_text(preds, labels):
-    preds = [pred.strip() for pred in preds]
-    labels = [[label.strip()] for label in labels]
+    gt = []
+    pred = []
+    print(preds, labels)
+    for i in range(len(preds)):
 
-    return preds, labels
+        gt_dict = {'id' : str(i)}
+        
+        try:
+            label = re.sub('[!@%#$,]', '', labels[i].strip())
+            label = eval(label)
+        except Exception:
+            label = 'xxxxxxxxxxxx'
+            # print(uid, order)   
+            # exit(0)
+
+        gt_dict['answers'] = {"text": [label], 'answer_start':[0]}
+        gt.append(gt_dict)
+
+
+        try:
+            predi = re.sub('[!@%#$,]', '', preds[i].strip())
+            predi = eval(predi)
+        except Exception:
+            predi = 'yyyyyyyyyyy'
+            # print(uid, order)   
+            # exit(0)
+
+        pred_dict = {'id' : str(i)}
+        pred_dict['prediction_text'] = predi
+        pred.append(pred_dict)
+        
+    # preds = [pred.strip() for p
+    # red in preds]
+    # labels = [[label.strip()] for label in labels]
+    # return preds, labels
+
+    print(pred, gt)
+    return pred, gt
 
 def compute_metrics(eval_preds):
     preds, labels = eval_preds
@@ -79,15 +84,23 @@ def compute_metrics(eval_preds):
     # Some simple post-processing
     decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
     # print('='*60)
-    # print(decoded_preds, decoded_labels)
+    # print(decoded_preds)
     # print('='*60)
+    # print(decoded_labels)
+    # print('='*60)
+    # print(len(decoded_labels), len(decoded_preds))
+    # exit(0)
+    
 
     result = metric.compute(predictions=decoded_preds, references=decoded_labels)
-    result = {"bleu": result["score"]}
+    # result = {"bleu": result["score"]}
 
     prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
     result["gen_len"] = np.mean(prediction_lens)
     result = {k: round(v, 4) for k, v in result.items()}
+    # print('=' *100)
+    # print(result)
+    # print('=' *100)
     return result   
 
 
@@ -135,39 +148,17 @@ args = Seq2SeqTrainingArguments(
     predict_with_generate=True,
     fp16=True,
 
-    # evaluation_strategy = 'epoch',
-    # save_strategy = 'epoch',
+    evaluation_strategy = 'epoch',
+    save_strategy = 'epoch',
 
-    # metric_for_best_model = "eval_loss",
-    # greater_is_better = False, 
-
-
-    # save_total_limit = 1,
-    # load_best_model_at_end=True,
+    metric_for_best_model = "eval_exact_match",
+    greater_is_better = True, 
 
 
-    evaluation_strategy = "epoch",
-    save_total_limit = 2,
-    save_strategy = "no",
-    load_best_model_at_end=False,
+    save_total_limit = 1,
+    load_best_model_at_end=True,
 
 )
-
-# args = Seq2SeqTrainingArguments(
-#     training_name,
-#     learning_rate = 2e-5,
-#     per_device_train_batch_size=batch_size,
-#     per_device_eval_batch_size=batch_size,
-#     weight_decay=0.01,
-#     num_train_epochs=nepochs,
-#     predict_with_generate=True,
-#     fp16=True,
-
-#     evaluation_strategy = "epoch",
-#     save_total_limit = 2,
-#     save_strategy = "no",
-#     load_best_model_at_end=False,
-# )
 
 trainer = Seq2SeqTrainer(
     model=model,

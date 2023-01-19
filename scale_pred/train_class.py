@@ -1,3 +1,4 @@
+# type: ignore
 import os
 os.environ["CUDA_VISIBLE_DEVICES"]="4"
 os.environ['WANDB_DISABLED'] = 'true'
@@ -17,11 +18,10 @@ from transformers import DataCollatorWithPadding
 from transformers import AutoModelForSequenceClassification, TrainingArguments, Trainer, AutoConfig
 
 batch_size = 42
-num_classes = 9
-training_name = "roberta-base-bs-42-hyp"
+num_classes = 5
+training_name = "roberta-bs-42-scale"
 # model_checkpoint = "xlnet-base-cased"
 model_checkpoint = "roberta-base"
-# model_checkpoint = "bert-base-uncased"
 # model_checkpoint = "distilbert-base-uncased"
 # model_checkpoint = "ProsusAI/finbert"
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
@@ -44,12 +44,13 @@ def compute_metrics(eval_preds):
 class TextDataset(Dataset):
     def __init__(self, mode = 'train'):
         self.mode = mode
-        self.df = pd.read_csv(f'dataset_tagop/{mode}.csv')
+        self.df = pd.read_csv(f'dataset_tagop/{mode}_roberta.csv')
+        # self.df = pd.read_csv(f'dataset_tagop/{mode}_class.csv')
         self.tokenizer = tokenizer
 
     def __getitem__(self, idx):
         item = self.df.iloc[idx].values
-        tokenized_inputs = tokenizer(item[2], truncation=True)
+        tokenized_inputs = tokenizer(item[-2], truncation=True)
         tokenized_inputs['label'] = int(item[-1])
         return tokenized_inputs
 
@@ -75,7 +76,7 @@ model = AutoModelForSequenceClassification.from_pretrained(model_checkpoint, num
 
 training_args = TrainingArguments(
     training_name,
-    # evaluation_strategy="epoch",
+    evaluation_strategy="epoch",
     # save_strategy="epoch",
     # learning_rate=0.0001,
     learning_rate=2e-5,
@@ -86,21 +87,9 @@ training_args = TrainingArguments(
     # auto_find_batch_size = True
 
 
-    # save_total_limit = 2,
-    # save_strategy = "no",
-    # load_best_model_at_end=False,
-
-
-    evaluation_strategy = 'epoch',
-    save_strategy = 'epoch',
-
-    metric_for_best_model = "eval_loss",
-    greater_is_better = False, 
-
-
-    save_total_limit = 1,
-    load_best_model_at_end=True,
-
+    save_total_limit = 2,
+    save_strategy = "no",
+    load_best_model_at_end=False,
 )
 
 trainer = Trainer(

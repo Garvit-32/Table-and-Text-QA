@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.decomposition import dict_learning 
 from tqdm import tqdm
 import os
-
+import re
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -44,8 +44,6 @@ for i in tqdm(range(len(data))):
 
     # text = table_text + " " + para_text
 
-
-
     for ques in questions:
                 
         ques_order = ques['order']
@@ -55,32 +53,39 @@ for i in tqdm(range(len(data))):
         
 
 
-        if answer_type in ['arithmetic']: continue
+        if answer_type in ['arithmetic']: 
+            answer = str(ques['derivation'].strip())       
+            answer = re.sub('[[]', '(', answer)       
+            answer = re.sub('[]]', ')', answer)       
+            answer = re.sub(' ', '', answer)       
+
+            if len(scale):
+                answer += f' {scale}'
+        
+        else:
+            continue
         # if answer_type != 'count': continue
 
-        # answer = str(ques['derivation'].strip())
-        # if len(scale):
-        #     answer += f' {scale}'
             
         #     # answer += ' <a>'
         
-        elif answer_type == 'count':
-            answer = ' ^ '.join(ques['facts'])
+        # elif answer_type == 'count':
+        #     answer = ' ^ '.join(ques['facts'])
         
-            if len(scale):
-                answer += f' {scale}'
+        #     if len(scale):
+        #         answer += f' {scale}'
             
-        else:
-            if isinstance(answers,(float, int)):
-                answer = str(answers)
+        # else:
+        #     if isinstance(answers,(float, int)):
+        #         answer = str(answers)
             
-            elif isinstance(answers,str):
-                answer = answers
-            elif isinstance(answers,list):
-                answer = list(map(str, answers))
-                answer = ' '.join(answers)
-            if len(scale):
-                answer += f' {scale}'
+        #     elif isinstance(answers,str):
+        #         answer = answers
+        #     elif isinstance(answers,list):
+        #         answer = list(map(str, answers))
+        #         answer = ' '.join(answers)
+        #     if len(scale):
+        #         answer += f' {scale}'
             
         tmp = ques['question'] + text
 
@@ -88,8 +93,6 @@ for i in tqdm(range(len(data))):
             'uid':uid,
             'order': ques_order,
             'type': ques['answer_type'],
-            # 'question' : ques['question'],
-            # 'text': text,
             'text': tmp,
             'answer': answer, 
             
@@ -100,7 +103,7 @@ for i in tqdm(range(len(data))):
 
 
 
-dataset.to_csv(f'dataset_tagop/{mode}_count_text.csv', index = False)
+dataset.to_csv(f'dataset_tagop/{mode}_arithmetic.csv', index = False)
 
 # 68bafc82-b795-4c7b-9506-e901223c3526,3
 

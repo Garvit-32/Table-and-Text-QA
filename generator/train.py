@@ -1,44 +1,33 @@
-# type: ignore
-
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="4"
+os.environ["CUDA_VISIBLE_DEVICES"]="6"
 os.environ['WANDB_DISABLED'] = 'true'
 os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = 'true'
 # os.environ['WANDB_PROJECT']='TATQA-TEXT'
 
 import json
 import ast
-import random
 import numpy as np
 import pandas as pd 
-import torch
 import evaluate
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
-from transformers import AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer, AutoModel
+from transformers import AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
-def seed_everything(seed: int):
-    random.seed(seed)
-    os.environ["PYTHONHASHSEED"] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = True
 
-seed_everything(42)
 
 batch_size = 32
-nepochs = 20
-training_name = "bart-base-bs-32-old-hyp"
-model_checkpoint = "facebook/bart-base"
-suffix = ''
-# suffix = '_all'
-# suffix = '_not_op'
+nepochs = 10
+max_length = 512
+truncation = True
+training_name = "t5-base-bs-32-only-text-count"
+model_checkpoint = "t5-base"
+
+suffix = '_count_text'
 
 print(model_checkpoint)
+print(training_name)
+
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
-# tokenizer.pad_token = tokenizer.eos_token 
 
  
 # fmetric = evaluate.load("f1")
@@ -78,9 +67,6 @@ def compute_metrics(eval_preds):
 
     # Some simple post-processing
     decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
-    # print('='*60)
-    # print(decoded_preds, decoded_labels)
-    # print('='*60)
 
     result = metric.compute(predictions=decoded_preds, references=decoded_labels)
     result = {"bleu": result["score"]}
@@ -94,19 +80,27 @@ def compute_metrics(eval_preds):
 class TextDataset(Dataset):
     def __init__(self, mode = 'train'):
         self.mode = mode
-        self.df = pd.read_csv(f'dataset_tagop/{mode}{suffix}.csv')
+        if len(suffix):
+            # print(f'dataset_tagop/{mode}{suffix}.csv')
+            self.df = pd.read_csv(f'dataset_tagop/{mode}{suffix}.csv')
+        else:
+            self.df = pd.read_csv(f'dataset_tagop/{mode}.csv')
         self.tokenizer = tokenizer
         # self.prefix = "summarize: "
         # self.prefix = "translate English to English: "
+            
         
 
     def __getitem__(self, idx):
         item = self.df.iloc[idx].values
         
-        inputs = item[-2]
+        # question = item[-3]
+        # text = item[-2]
         targets = item[-1]
+        inputs = item[-2]
+        # inputs = f"question: {question} context: {text}"
         
-        tokenized_inputs = tokenizer(inputs, text_target = targets, max_length = 512, truncation = True)
+        tokenized_inputs = tokenizer(inputs, text_target = targets, max_length = max_length, truncation = truncation)
         return tokenized_inputs
 
 
@@ -119,7 +113,6 @@ eval_dataset = TextDataset(mode = 'dev')
 
 
 model = AutoModelForSeq2SeqLM.from_pretrained(model_checkpoint)
-# model = AutoModel.from_pretrained(model_checkpoint)
 
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
@@ -127,7 +120,8 @@ data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 args = Seq2SeqTrainingArguments(
     training_name,
-    learning_rate = 2e-5,
+    evaluation_strategy = "epoch",
+    learning_rate=2e-5,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
     weight_decay=0.01,
@@ -135,39 +129,10 @@ args = Seq2SeqTrainingArguments(
     predict_with_generate=True,
     fp16=True,
 
-    # evaluation_strategy = 'epoch',
-    # save_strategy = 'epoch',
-
-    # metric_for_best_model = "eval_loss",
-    # greater_is_better = False, 
-
-
-    # save_total_limit = 1,
-    # load_best_model_at_end=True,
-
-
-    evaluation_strategy = "epoch",
     save_total_limit = 2,
     save_strategy = "no",
     load_best_model_at_end=False,
-
 )
-
-# args = Seq2SeqTrainingArguments(
-#     training_name,
-#     learning_rate = 2e-5,
-#     per_device_train_batch_size=batch_size,
-#     per_device_eval_batch_size=batch_size,
-#     weight_decay=0.01,
-#     num_train_epochs=nepochs,
-#     predict_with_generate=True,
-#     fp16=True,
-
-#     evaluation_strategy = "epoch",
-#     save_total_limit = 2,
-#     save_strategy = "no",
-#     load_best_model_at_end=False,
-# )
 
 trainer = Seq2SeqTrainer(
     model=model,

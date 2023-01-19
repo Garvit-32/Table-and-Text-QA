@@ -11,7 +11,7 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 
-mode = 'dev'
+mode = 'test'
 path = 'dataset_tagop_table'
 
 os.makedirs(f'{path}/{mode}', exist_ok = True)

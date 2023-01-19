@@ -18,8 +18,9 @@ warnings.filterwarnings('ignore')
 dataset = pd.DataFrame(columns = ['uid', 'order', 'question', 'text', 'answer', 'token', 'ner'])
 
 # os.makedirs(f'dataset_tagop/{mode}', exist_ok = True)
-mode = 'train'
-f = open(f"{mode}_log.txt", "a")
+mode = 'dev'
+suffix = 'old'
+f = open(f"{mode}_{suffix}_log.txt", "a")
 data =json.load(open(f'dataset_tagop/tatqa_dataset_{mode}.json', 'r'))
 
 tag_dict = {"B-ANS":1, 
@@ -46,6 +47,10 @@ for i in tqdm(range(len(data))):
     text = [para['text'] for para in paragraphs]
     questions = data[i]['questions']
     for ques in questions:
+
+        if ques["answer_from"] == "table":
+            continue
+
         ques_order = ques['order']
         tokens = []
         tags = []
@@ -122,5 +127,5 @@ for i in tqdm(range(len(data))):
         # print('=' * 60)
 
 
-dataset.to_csv(f'dataset_tagop/{mode}.csv', index = False)
+dataset.to_csv(f'dataset_tagop/{mode}_{suffix}.csv', index = False)
 f.close()

@@ -8,8 +8,9 @@ warnings.filterwarnings('ignore')
 
 dataset = pd.DataFrame(columns = ['uid', 'order', 'question', 'text', 'answer', 'token', 'ner'])
 
-mode = 'dev'
-f = open(f"{mode}_log.txt", "a")
+mode = 'train'
+suffix = 'roberta'
+f = open(f"{mode}_{suffix}_log.txt", "a")
 data =json.load(open(f'dataset_tagop/tatqa_dataset_{mode}.json', 'r'))
 
 
@@ -111,7 +112,7 @@ def paragraph_tags(paragraphs, mapping):
             if is_whitespace(c):  # or c in ["-", "–", "~"]:
                 if wait_add:
                     if 1 in current_tags[start_index:i]:
-                        tags.append(2)
+                        tags.append(1)
                     else:
                         tags.append(0)
                     wait_add = False
@@ -120,7 +121,7 @@ def paragraph_tags(paragraphs, mapping):
             elif c in ["-", "–", "~"]:
                 if wait_add:
                     if 1 in current_tags[start_index:i]:
-                        tags.append(2)
+                        tags.append(1)
                     else:
                         tags.append(0)
                     wait_add = False
@@ -137,7 +138,7 @@ def paragraph_tags(paragraphs, mapping):
                 prev_is_whitespace = False
         if wait_add:
             if 1 in current_tags[start_index:len(text)]:
-                tags.append(2)
+                tags.append(1)
             else:
                 tags.append(0)
 
@@ -154,14 +155,14 @@ def paragraph_tags(paragraphs, mapping):
     #         token.append(i)   
 
     # new_tags = []
-    zero = True
-    for idx, i in enumerate(tags):
-        if i == 2 and zero == True:
-            tags[idx] = 1
-            # new_tags.append(1)
-            zero = False
-        elif i == 0:
-            zero = True
+    # zero = True
+    # for idx, i in enumerate(tags):
+    #     if i == 2 and zero == True:
+    #         tags[idx] = 1
+    #         # new_tags.append(1)
+    #         zero = False
+    #     elif i == 0:
+    #         zero = True
     
     return tokens, tags
 
@@ -184,6 +185,9 @@ for i in tqdm(range(len(data))):
 
         # if ques_order != 3: continue
         # if ques_order != 6: continue
+
+        if ques["answer_from"] == "table":
+            continue
         
     
         para_tokens, para_tags = paragraph_tags(paragraphs, mappings)
@@ -197,8 +201,13 @@ for i in tqdm(range(len(data))):
             f.write(f"MAPPING: {mappings}\n")
             f.write('=' * 60 + '\n')
             continue
+        
 
-        tokens = ques_token + ['[SEP]'] + para_tokens
+        # bert
+        # tokens = ques_token + ['[SEP]'] + para_tokens
+        # roberta
+        tokens = ques_token + ['</s>'] + para_tokens
+        
         tags = ques_tag + [None] + para_tags 
 
         row = {
@@ -218,7 +227,7 @@ for i in tqdm(range(len(data))):
         #     count += 1
 
 print(count)
-dataset.to_csv(f'dataset_tagop/{mode}.csv', index = False)
+dataset.to_csv(f'dataset_tagop/{mode}_{suffix}.csv', index = False)
 f.close()
 
 

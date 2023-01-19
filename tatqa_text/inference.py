@@ -18,7 +18,7 @@ para = "Sales by Contract Type: Substantially all of our contracts are fixed-pri
 # for p in paras:
 #     num = to_number(p)
 #     if num is not None:
-#         new_paras.append(str(num))
+#         new_paras.append(str(w))
 #     else:
 #         new_paras.append(p.lower())
 

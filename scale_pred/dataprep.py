@@ -1,7 +1,8 @@
+# type: ignore
+
 import json
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import dict_learning 
 from tqdm import tqdm
 import os
 
@@ -16,9 +17,7 @@ dataset = pd.DataFrame(columns = ['uid', 'order','type','text', 'answer'])
 
 mode = 'train'
 data =json.load(open(f'dataset_tagop/tatqa_dataset_{mode}.json', 'r'))
-# f = open(f"{mode}_log.txt", "w")
 
-count, total = 0, 0
 
 for i in tqdm(range(len(data))):
     
@@ -42,54 +41,21 @@ for i in tqdm(range(len(data))):
 
     text = " </s> " + table_text + " </s> " + para_text  
 
-    # text = table_text + " " + para_text
-
-
-
     for ques in questions:
                 
         ques_order = ques['order']
         answers = ques['answer']
         scale = ques['scale']
         answer_type = ques['answer_type']
-        
-
-
-        if answer_type in ['arithmetic']: continue
-        # if answer_type != 'count': continue
-
-        # answer = str(ques['derivation'].strip())
-        # if len(scale):
-        #     answer += f' {scale}'
-            
-        #     # answer += ' <a>'
-        
-        elif answer_type == 'count':
-            answer = ' ^ '.join(ques['facts'])
-        
-            if len(scale):
-                answer += f' {scale}'
-            
-        else:
-            if isinstance(answers,(float, int)):
-                answer = str(answers)
-            
-            elif isinstance(answers,str):
-                answer = answers
-            elif isinstance(answers,list):
-                answer = list(map(str, answers))
-                answer = ' '.join(answers)
-            if len(scale):
-                answer += f' {scale}'
-            
+                    
         tmp = ques['question'] + text
-
+    
+        answer = scale if len(scale) else "none"
+        
         row = {
             'uid':uid,
             'order': ques_order,
             'type': ques['answer_type'],
-            # 'question' : ques['question'],
-            # 'text': text,
             'text': tmp,
             'answer': answer, 
             
@@ -98,9 +64,7 @@ for i in tqdm(range(len(data))):
         dataset = dataset.append(row, ignore_index = True)
 
 
-
-
-dataset.to_csv(f'dataset_tagop/{mode}_count_text.csv', index = False)
+dataset.to_csv(f'dataset_tagop/{mode}.csv', index = False)
 
 # 68bafc82-b795-4c7b-9506-e901223c3526,3
 

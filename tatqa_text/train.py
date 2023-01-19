@@ -1,6 +1,6 @@
 import os
 os.environ['WANDB_DISABLED'] = 'true'
-os.environ["CUDA_VISIBLE_DEVICES"]="6"
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
 os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = 'true'
 # os.environ['WANDB_PROJECT']='TATQA-TEXT'
 
@@ -14,14 +14,28 @@ from transformers import DataCollatorForTokenClassification, AutoTokenizer, Auto
 
 
 
-batch_size = 32
-epochs = 20
-training_name = 'bert-large-bio-bs-32'
-model_checkpoint = "bert-large-uncased"
-tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+batch_size = 16
+epochs = 30
+training_name = 'roberta-ner-io-unfix-bs-16-epoch-30'
+# model_checkpoint = "Jean-Baptiste/roberta-large-ner-english"
+# suffix = 'roberta'
+# training_name = 'roberta-large-conll-ner-io-unfix'
+# model_checkpoint = "xlm-roberta-large-finetuned-conll03-english"
+model_checkpoint = "Jean-Baptiste/roberta-large-ner-english"
+suffix = 'roberta'
+print(training_name)
+print(model_checkpoint)
+
+
+# model_checkpoint = "bert-large-uncased"
+
+
+# tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+tokenizer = AutoTokenizer.from_pretrained(model_checkpoint, add_prefix_space=True)
 data_collator = DataCollatorForTokenClassification(tokenizer=tokenizer)
 
-df = pd.read_csv('dataset_tagop/train.csv').values
+
+df = pd.read_csv(f'dataset_tagop/train_{suffix}.csv').values
 # label_names = ['O', 'I']
 # label_names = ['O', 'I-ANS', 'B-ANS']
 label_names = ['O', 'B-ANS', 'I-ANS']
@@ -48,8 +62,10 @@ def align_labels_with_tokens(labels, word_ids, sep_idx):
             # Same word as previous token
             label = labels[word_id]
             # If the label is B-XXX we change it to I-XXX
+            # ============================
             if label % 2 == 1:
                 label += 1
+            # ============================
             new_labels.append(label)
 
     return new_labels
@@ -70,14 +86,14 @@ def compute_metrics(eval_preds):
         "precision": all_metrics["overall_precision"],
         "recall": all_metrics["overall_recall"],
         "f1": all_metrics["overall_f1"],
-        "accuracy": all_metrics["overall_accuracy"],
+        # "accuracy": all_metrics["overall_accuracy"],
     }
 
 
 class TextDataset(Dataset):
     def __init__(self, mode = 'train'):
         self.mode = mode
-        self.df = pd.read_csv(f'dataset_tagop/{mode}.csv')
+        self.df = pd.read_csv(f'dataset_tagop/{mode}_{suffix}.csv')
         self.tokenizer = tokenizer
 
     def __getitem__(self, idx):
@@ -85,13 +101,19 @@ class TextDataset(Dataset):
 
         tokenized_inputs = tokenizer(ast.literal_eval(item[-2]), truncation=True, is_split_into_words=True)
         labels =  ast.literal_eval(item[-1])            
-        sep_idx = tokenized_inputs.tokens().index('[SEP]')
+        sep_idx = tokenized_inputs.tokens().index('</s>')
+        # sep_idx = tokenized_inputs.tokens().index('[SEP]')
         word_ids = tokenized_inputs.word_ids()
+
+        # word_ids = tokenized_inputs.word_ids()
         new_labels = align_labels_with_tokens(labels, word_ids, sep_idx)
         tokenized_inputs["labels"] = new_labels
-        # print(tokenized_inputs.keys())
         # print('token', len(ast.literal_eval(item[-2])))
         # print('label', len(ast.literal_eval(item[-1])))
+        # print(new_labels, len(new_labels))
+        # print(labels, len(labels))
+        # print(word_ids)
+        # print(tokenized_inputs.tokens())
         # for key,val in tokenized_inputs.items():
         #     print(f'==== {key} ====')
         #     print(val, len(val))
@@ -106,7 +128,7 @@ class TextDataset(Dataset):
 train_dataset = TextDataset(mode = 'train')
 eval_dataset = TextDataset(mode = 'dev')
 # train_dataset[0]
-# exit(0cl)
+# exit(0)
 
 
 id2label = {str(i): label for i, label in enumerate(label_names)}
@@ -117,7 +139,8 @@ model = AutoModelForTokenClassification.from_pretrained(
     model_checkpoint,
     id2label=id2label,
     label2id=label2id,
-    num_labels = len(label_names)
+    num_labels = len(label_names), 
+    ignore_mismatched_sizes=True
 )
 
 
@@ -126,7 +149,6 @@ print(model.config.num_labels)
 
 args = TrainingArguments(
     training_name,
-    evaluation_strategy="epoch",
     # save_strategy="epoch",
     learning_rate=2e-5,
     num_train_epochs=epochs,
@@ -136,9 +158,20 @@ args = TrainingArguments(
     # auto_find_batch_size = True,
     # logging_dir = 'logs' 
 
+    evaluation_strategy="epoch",
     save_total_limit = 2,
     save_strategy = "no",
     load_best_model_at_end=False,
+    
+    # evaluation_strategy = 'epoch',
+    # save_strategy = 'epoch',
+
+    # metric_for_best_model = "eval_loss",
+    # greater_is_better = False, 
+
+
+    # save_total_limit = 1,
+    # load_best_model_at_end=True,
 )
 
 

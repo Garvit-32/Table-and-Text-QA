@@ -15,7 +15,8 @@ import evaluate
 metric = evaluate.load("squad_v2")
 
 
-model_checkpoint = 'tapas_large'
+model_checkpoint = 'tapas'
+# model_checkpoint = 'tapas_large'
 tokenizer = TapasTokenizer.from_pretrained(model_checkpoint)
 
 # model = TapasForQuestionAnswering.from_pretrained('best_save_3')

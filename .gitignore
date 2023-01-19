@@ -7,5 +7,9 @@
 tatqa_tapas/tapas**
 
 **t5**
+**bart**
 *.txt
 *.csv
+!requirements.txt
+anal_results.py
+**.bin

@@ -36,10 +36,15 @@ text_model_checkpoint = "tatqa_text/roberta-ner-io-unfix"
 # text_model_checkpoint = "tatqa_text/bert-large-bs-16"
 # text_model_checkpoint = "tatqa_text/bert-large-num-bs-16"
 
-op_model_checkpoint = "operator_pred/bert-tc-bs-42-arith"
+op_model_checkpoint = "operator_pred/bert-tc-bs-42-hyp"
+# op_model_checkpoint = "operator_pred/bert-tc-bs-42-arith"
+
+
+scale_model_checkpoint = "scale_pred/bert-tc-bs-42-scale"
 # op_model_checkpoint = "operator_pred/bert-tc-bs-42"
 
-gen_model_checkpoint = "expression_generator/t5-base-bs-32"
+gen_model_checkpoint = "expression_generator/t5-base-bs-16-clean"
+# gen_model_checkpoint = "expression_generator/t5-base-bs-32"
 
 # gen_model_checkpoint = "expression_generator/t5-base-translation-bs-8"
 
@@ -50,6 +55,8 @@ table_model.to(device)
 
 op_list = ["SPAN-TEXT", "SPAN-TABLE", "MULTI_SPAN", "CHANGE_RATIO",
                     "AVERAGE", "COUNT", "SUM", "DIFF", "TIMES", "DIVIDE" ,"MIXED"]
+
+scale_list = ["", "thousand", "million",  "billion", "percent"]
 
 # exp_list = {
 #             3: ['-', '/', "(" , ")", '[', ']'],  # change ratio
@@ -78,6 +85,10 @@ text_model = pipeline(
 
 op_model = pipeline(
     "text-classification", model=op_model_checkpoint, device = 0
+)
+
+scale_model = pipeline(
+    "text-classification", model=scale_model_checkpoint, device = 0, truncation= True
 )
 
 generator = pipeline(
@@ -170,6 +181,8 @@ def text_postprocess(question, paragraphs):
         
         prev_end = end
 
+    text = [" ".join(i.split()) for i in text]
+
     return text
     
     
@@ -204,7 +217,7 @@ def gen_postprocess(question, table_output, text_output, exp_list):
     return exp
 
 
-def prepare_gt(uid, order, answers):
+def prepare_gt(uid, order, answers, scale):
     uid_order = uid + '_'+ str(order)
     gt_dict = {'id' : uid_order}
 
@@ -220,53 +233,75 @@ def prepare_gt(uid, order, answers):
         answers = list(map(str, answers))
         answer = ' '.join(answers)
         answer = answer.lower()
+    
+    answer = answer[:-1] if answer[-1] == '.' else answer
+
+    if len(scale):
+        answer += f' {scale}'
+        
 
     gt_dict['answers'] = {"text": [answer], 'answer_start':[0]}
     return gt_dict
 
 
-def prepare_pred(uid, order, table, text, ans):
+def prepare_pred(uid, order, table, text, ans, scale):
 
     pred_dict = {'id' : uid + '_'+ str(order)}
     # pred_dict['no_answer_probability'] = 1.
 
     if ans is not None:
+        ans = ans[:-1] if ans[-1] == '.' else ans
+        if len(scale):
+            ans += f' {scale}'
         pred_dict['prediction_text'] = ans
         return pred_dict
 
     elif len(table) or len(text):
         table = np.unique(list(map(str, table)))
         text = np.unique(list(map(str, text)))
-            
+        answer = ''
+             
         if len(table) != 0 and len(text) != 0:
             table.sort()
             text.sort()
             text_list = np.unique(np.concatenate((table,text)))
-            pred_dict['prediction_text'] = " ".join(text_list)
-            return pred_dict
+            answer = " ".join(text_list) 
+            
 
         elif len(table) != 0:
             
             table.sort()
-            pred_dict['prediction_text'] = " ".join(table)
-            return pred_dict
+            answer = " ".join(table)
 
+        
         elif len(text) != 0:
             text.sort()
-            pred_dict['prediction_text'] = " ".join(text)
-            return pred_dict
-    
+            answer = " ".join(text)
+
+
+        answer = answer[:-1] if answer[-1] == '.' else answer
+
+        if len(scale):
+            answer += f' {scale}'
+
+        answer = answer.lower()
+        pred_dict['prediction_text'] = answer
+
+        return pred_dict
+
     else:
         pred_dict['prediction_text'] = ''
+        if len(scale):
+            pred_dict['prediction_text'] += f' {scale}'
         return pred_dict
          
         
-def exp_postproces(exp):
+def exp_postproces(exp, scale):
     try: 
         exp = re.sub('[!@%#$,]', '', str(exp))       
         ans = eval(exp)                    
         # if 'percentage' in question or '%' in table_output[0]:
-        if 'percentage' in question:
+        if scale == 'percent':
             ans *= 100
         ans = round(ans, 2)
         
@@ -279,11 +314,21 @@ def exp_postproces(exp):
 
     return str(ans)
 
+
+def scale_postprocess(text):
+    
+    output = scale_model(text)
+    # print('='*60)
+    # print(int(output[0]['label'].split('_')[-1]))
+    # print('='*60)
+    return scale_list[int(output[0]['label'].split('_')[-1])]
+    
+
 # count = []
 # from collections import defaultdict
 # store = defaultdict(list)
 
-df = pd.DataFrame(columns = ['uid', 'order', 'question', 'ans', 'pred'])
+df = pd.DataFrame(columns = ['uid', 'order', 'type', 'from', 'question', 'ans', 'pred'])
 data =json.load(open(f'operator_pred/dataset_tagop/tatqa_dataset_{mode}.json', 'r'))
 # f = open(f"log.txt", "w")
 exact, f1 = [],[]
@@ -294,8 +339,25 @@ for i in tqdm(range(len(data))):
     paragraphs = data[i]['paragraphs']
     uid = data[i]['table']['uid']
     text = [para['text'] for para in paragraphs]
+    table = data[i]['table']
+    table_data = table['table']
+
+
+    para_text = [para['text'].strip() for para in paragraphs]
+    para_text = ' '.join(para_text)
+
+    table_tokens = []
+    for a in table_data:
+        for b in a:
+            if len(b):
+                table_tokens.append(b.strip())
+    
+    table_text = ' '.join(table_tokens)
+
+    tmp_text = " [SEP] " + table_text + " [SEP] " + para_text  
+
+
     # if uid != '3ffd9053-a45d-491c-957a-1b2fa0af0570': continue
-    # if uid != '52164b70-6973-4844-af6a-76e8f1298d64': continue
 
     questions = data[i]['questions']
     for ques in questions:
@@ -303,28 +365,28 @@ for i in tqdm(range(len(data))):
         mappings = ques['mapping']
         question = ques['question']
         answer = ques['answer']
+        scale = ques['scale']
         ans = None
 
         # if ques_order != 1: continue
 
-        gt_dict = prepare_gt(uid, ques_order, answer)
+        gt_dict = prepare_gt(uid, ques_order, answer, scale)
 
         table_output = table_postprocess(uid, question)
         text_output = text_postprocess(question, text)
         operator = op_postprocess(question)
+        pred_scale = scale_postprocess(ques['question'] + tmp_text)
+        
         
         if operator > 0 :
-        # if operator > 2 :
-
-            # if operator == 5:  # For COUNT
             if operator == 3:  # For COUNT
                 ans = str(len(table_output) + len(text_output))
             else:
                 expression = gen_postprocess(question, table_output, text_output, exp_list[operator])
                 exp = expression[0]['translation_text']
-                ans = exp_postproces(exp)
+                ans = exp_postproces(exp, pred_scale)
 
-        pred_dict = prepare_pred(uid, ques_order, table_output, text_output, ans)
+        pred_dict = prepare_pred(uid, ques_order, table_output, text_output, ans, pred_scale)
         pred.append(pred_dict)
         gt.append(gt_dict)
         
@@ -338,30 +400,20 @@ for i in tqdm(range(len(data))):
         # print(operator)
         # exact.append(arg1)
         # f1.append(arg2)
-    
-
-
-        # if arg1 + arg2 == 0:
-        #     f.write('Continuing\n')
-        #     f.write(f"UID: {uid}\n")
-        #     f.write(f"ORDER: {ques_order}\n")
-        #     f.write(f"QUESTION: {question}\n")
-        #     f.write(f"ANSWER: {gt_dict['answers']['text']}\n")
-        #     f.write(f"PRED: {pred_dict['prediction_text']}\n")
-        #     f.write('=' * 60 + '\n')
-
         
-        # if gt_dict['answers']['text'][0] !=  pred_dict['prediction_text']:
+        if gt_dict['answers']['text'][0] !=  pred_dict['prediction_text']:
             
-        #     row = {
-        #             'uid':uid,
-        #             'order': ques_order,
-        #             'question':question,
-        #             'ans': gt_dict['answers']['text'][0], 
-        #             'pred' : pred_dict['prediction_text']
-        #     }
+            row = {
+                    'uid':uid,
+                    'order': ques_order,
+                    'type': ques['answer_type'],
+                    'from': ques['answer_from'],
+                    'question':question,
+                    'ans': gt_dict['answers']['text'][0], 
+                    'pred' : pred_dict['prediction_text']
+            }
 
-        #     df = df.append(row, ignore_index = True)
+            df = df.append(row, ignore_index = True)
             
 
 result = metric.compute(predictions=pred, references=gt)
@@ -369,7 +421,7 @@ print(result)
 # print(np.mean(exact))
 # print(np.mean(f1))
 
-# df.to_csv(f'results_nc.csv', index = False)
+df.to_csv(f'results_merge_scale_nc.csv', index = False)
 # f.close()
 
 
@@ -451,3 +503,7 @@ print(result)
 # text_model_checkpoint = "tatqa_text/bert-large-bs-16"
 # op_model_checkpoint = "operator_pred/bert-tc-bs-42-arith"
 # {'exact_match': 58.87290167865707, 'f1': 70.45967781294495}
+
+
+# with scale
+# {'exact_match': 57.13429256594724, 'f1': 76.83487358655381}
